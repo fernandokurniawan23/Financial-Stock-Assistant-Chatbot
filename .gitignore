@@ -10,5 +10,6 @@ __pycache__/
 # Gambar yang Dihasilkan oleh Program
 *.png
 
-# File sistem operasi (opsional, tapi bagus)
+# File sistem operasi
+
 .DS_Store
