@@ -1,0 +1,14 @@
+# File Kunci Rahasia
+API_KEY
+
+# Folder Virtual Environment
+.venv/
+
+# Cache Python
+__pycache__/
+
+# Gambar yang Dihasilkan oleh Program
+*.png
+
+# File sistem operasi (opsional, tapi bagus)
+.DS_Store

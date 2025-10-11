@@ -89,7 +89,6 @@ if prompt := st.chat_input("Tanyakan sesuatu tentang saham..."):
 
             function_response_data = function_to_call(**tool_args)
 
-            # MENGGUNAKAN KEMBALI METODE 'protos' YANG SUDAH BERHASIL
             final_response = st.session_state.chat.send_message(
                 genai.protos.Part(
                     function_response=genai.protos.FunctionResponse(
@@ -100,13 +99,11 @@ if prompt := st.chat_input("Tanyakan sesuatu tentang saham..."):
             )
             
             with st.chat_message("assistant"):
-                # Di versi baru, akses teks ada di `final_response.parts[0].text`
                 st.markdown(final_response.parts[0].text)
                 if tool_name == "plot_stock_price":
                     st.image("stock.png", caption=f"Grafik Harga Saham {tool_args['ticker']}")
         else:
             with st.chat_message("assistant"):
-                # Di versi baru, akses teks ada di `response.parts[0].text`
                 st.markdown(response.parts[0].text)
                 
     except Exception as e:
