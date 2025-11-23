@@ -1,0 +1,13 @@
+{
+  "watchlist": [
+    "AMZN",
+    "AAPL"
+  ],
+  "portfolio": [
+    {
+      "symbol": "AAPL",
+      "buy_price": 268.47,
+      "quantity": 10
+    }
+  ]
+}
