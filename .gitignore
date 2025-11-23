@@ -11,4 +11,9 @@ __pycache__/
 *.png
 
 # File sistem operasi
+<<<<<<< HEAD
 .DS_Store
+=======
+
+.DS_Store
+>>>>>>> 0d495bc76425c7e4b2cdad79bc0cc2565686b6bd
