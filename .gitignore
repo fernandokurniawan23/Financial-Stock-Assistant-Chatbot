@@ -1,19 +1,18 @@
-# File Kunci Rahasia
-API_KEY
+# Environment variables (WAJIB)
+.env
+.env.*
 
-# Folder Virtual Environment
+# Python virtual environment
 .venv/
+venv/
 
-# Cache Python
+# Python cache
 __pycache__/
+*.pyc
 
-# Gambar yang Dihasilkan oleh Program
+# Generated images
 *.png
 
-# File sistem operasi
-<<<<<<< HEAD
+# OS files
 .DS_Store
-=======
-
-.DS_Store
->>>>>>> 0d495bc76425c7e4b2cdad79bc0cc2565686b6bd
+Thumbs.db
