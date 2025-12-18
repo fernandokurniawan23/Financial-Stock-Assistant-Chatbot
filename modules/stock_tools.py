@@ -55,4 +55,4 @@ def yahoo_status() -> str:
         elif res.status_code == 429: return "🟡 Rate Limited"
         else: return f"🔴 Gangguan ({res.status_code})"
     except:
-        return "🔴 Offline"
+        return "🔴Offline"

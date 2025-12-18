@@ -1,0 +1,14 @@
+{
+  "watchlist": [
+    "AMZN",
+    "AAPL"
+  ],
+  "portfolio": [
+    {
+      "symbol": "BBCA.JK",
+      "buy_price": 8175.0,
+      "quantity": 20,
+      "currency": "IDR"
+    }
+  ]
+}

@@ -181,7 +181,7 @@ def show_dashboard():
         ]).upper()
     
     if news_count == 0:
-        st.caption("⚠️ Tidak ada data berita yang berhasil dimuat. Skor momentum mungkin tidak akurat.")
+        st.caption("Warning: Tidak ada data berita yang berhasil dimuat. Skor momentum mungkin tidak akurat.")
 
     if not candidates.empty:
         for _, row in candidates.iterrows():
@@ -217,7 +217,7 @@ def show_dashboard():
 
     momentum_df = pd.DataFrame(rows)
     if momentum_df.empty or "Momentum Score" not in momentum_df.columns:
-        st.warning("⚠️ Data tidak cukup untuk Market Momentum Index saat ini.")
+        st.warning("Warning: Data tidak cukup untuk Market Momentum Index saat ini.")
     else:
         top4 = momentum_df.sort_values(by="Momentum Score", ascending=False).head(4)
         cols = st.columns(len(top4))
@@ -301,7 +301,7 @@ def show_dashboard():
                                   plot_bgcolor="rgba(0,0,0,0)")
                 st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False, 'staticPlot': True})
     else:
-        st.warning("⚠️ Sedang lalu lintas tinggi ke bursa data. Coba refresh halaman dalam 1 menit.")
+        st.warning("Warning: Sedang lalu lintas tinggi ke bursa data. Coba refresh halaman dalam 1 menit.")
 
     # Footer & Navigation
     st.markdown("<div class='section-divider'></div>", unsafe_allow_html=True)

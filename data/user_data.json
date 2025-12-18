@@ -5,9 +5,34 @@
   ],
   "portfolio": [
     {
+      "symbol": "BBCA.JK",
+      "buy_price": 8170.0,
+      "quantity": 20,
+      "currency": "IDR"
+    },
+    {
       "symbol": "AAPL",
-      "buy_price": 268.47,
-      "quantity": 10
+      "buy_price": 271.0,
+      "quantity": 25,
+      "currency": "USD"
+    },
+    {
+      "symbol": "NVDA",
+      "buy_price": 170.0,
+      "quantity": 20,
+      "currency": "USD"
+    },
+    {
+      "symbol": "GOOG",
+      "buy_price": 298.0,
+      "quantity": 10,
+      "currency": "USD"
+    },
+    {
+      "symbol": "BBRI.JK",
+      "buy_price": 3775.0,
+      "quantity": 10,
+      "currency": "IDR"
     }
   ]
 }

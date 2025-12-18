@@ -4,12 +4,11 @@ from google import generativeai as genai
 import streamlit as st
 
 def load_gemini_model():
-    """Inisialisasi Gemini model dari .env"""
     load_dotenv()
     api_key = os.getenv("GEMINI_API_KEY")
 
     if not api_key:
-        st.error("❌ Gagal: Variabel GEMINI_API_KEY tidak ditemukan di file .env.")
+        st.error(" Error: Variabel GEMINI_API_KEY tidak ditemukan di file .env.")
         st.stop()
 
     genai.configure(api_key=api_key)

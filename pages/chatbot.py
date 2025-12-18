@@ -12,14 +12,15 @@ from modules.gemini_utils import load_gemini_model
 from modules.finance_tools import (
     get_stock_price, calculate_SMA, calculate_EMA,
     calculate_RSI, calculate_MACD, plot_interactive_chart,
-    get_fundamental_data, get_my_portfolio
+    get_fundamental_data, get_my_portfolio,
+    analyze_stock_recommendation, analyze_portfolio_holdings
 )
 
 # Constants
 DB_FILE = 'chat_history.db'
-ROLE_MODEL = 'model'      # Role untuk Gemini API
-ROLE_USER = 'user'        # Role untuk User
-ROLE_ASSISTANT = 'assistant' # Role untuk UI Streamlit
+ROLE_MODEL = 'model'
+ROLE_USER = 'user'
+ROLE_ASSISTANT = 'assistant'
 
 def init_db() -> None:
     """
@@ -92,7 +93,7 @@ def analyze_news_relevance(ticker: str, topic: Optional[str] = None) -> str:
     """
     news_api_key = os.getenv("NEWS_API_KEY")
     if not news_api_key:
-        return "❌ Error: Missing NEWS_API_KEY in environment variables."
+        return "Error: Missing NEWS_API_KEY in environment variables."
 
     try:
         newsapi = NewsApiClient(api_key=news_api_key)
@@ -186,7 +187,8 @@ def show_chatbot() -> None:
     tools = [
         get_stock_price, calculate_SMA, calculate_EMA,
         calculate_RSI, calculate_MACD, plot_interactive_chart,
-        get_fundamental_data, analyze_news_relevance, get_my_portfolio
+        get_fundamental_data, analyze_news_relevance, get_my_portfolio,
+        analyze_stock_recommendation, analyze_portfolio_holdings
     ]
     available_functions = {f.__name__: f for f in tools}
 
@@ -198,7 +200,7 @@ def show_chatbot() -> None:
              st.session_state.chat = model.start_chat(history=db_history_gemini)
         else:
             # --- UPDATE WELCOME MESSAGE DI SINI ---
-            welcome_msg = """👋 **Halo! Saya Asisten Analisis Saham AI.**
+            welcome_msg = """**Halo! Saya Asisten Analisis Saham AI.**
             
                 Saya siap membantu Anda memantau pasar saham (IDX & US). Berikut beberapa contoh perintah yang bisa Anda coba:
 
@@ -223,23 +225,23 @@ def show_chatbot() -> None:
             save_chat_log(ROLE_MODEL, welcome_msg)
 
     # Navigasi
-    if st.button("🏠 Kembali ke Dashboard"):
+    if st.button("Kembali ke Dashboard"):
         st.session_state.active_page = "Dashboard"
         st.rerun()
 
-    # --- 2. Render History Chat (LOOP UTAMA) ---
-    # Kita merender dari st.session_state.messages, bukan dari st.session_state.chat.history
+    # Render History Chat
+    # render from st.session_state.messages
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
-            # Jika pesan ini memiliki grafik yang tersimpan, tampilkan!
+            # Jika pesan ada grafik tersimpan, tampilkan
             if msg.get("chart"):
                  st.plotly_chart(msg["chart"], use_container_width=True)
 
-    # --- 3. Handler Input User ---
+    # Handler Input User
     if prompt := st.chat_input("Tanyakan sesuatu tentang saham..."):
         
-        # Tampilkan & Simpan Pesan User
+        # Show & Save Message User
         with st.chat_message(ROLE_USER):
             st.markdown(prompt)
         
@@ -247,16 +249,16 @@ def show_chatbot() -> None:
         save_chat_log(ROLE_USER, prompt)
 
         try:
-            # Kirim ke Gemini
+            # Send to Gemini
             response = st.session_state.chat.send_message(prompt, tools=tools)
 
             if not response or not response.parts:
-                st.error("⚠️ Tidak ada respon dari model.")
+                st.error("Warning: Tidak ada respon dari model.")
                 st.stop()
 
             first_part = response.parts[0]
 
-            # --- Skenario A: Function Calling ---
+            # Function Calling
             if hasattr(first_part, "function_call") and first_part.function_call:
                 fc = first_part.function_call
                 tool_name = fc.name
@@ -271,7 +273,7 @@ def show_chatbot() -> None:
                 if func:
                     with st.spinner(f"Menjalankan {tool_name}..."):
                         try:
-                            # Eksekusi fungsi Python
+                            # Eksekusi func Python
                             result = func(**tool_args)
 
                             # Kirim hasil fungsi kembali ke Gemini
@@ -287,8 +289,7 @@ def show_chatbot() -> None:
                             # Ambil jawaban akhir teks
                             answer_text = final_res.parts[0].text
                             
-                            # Cek apakah ada grafik baru yang dibuat oleh fungsi?
-                            # Kita asumsikan fungsi 'plot_interactive_chart' memperbarui st.session_state.last_chart
+                            # fungsi 'plot_interactive_chart' memperbarui st.session_state.last_chart
                             current_chart = None
                             if tool_name == "plot_interactive_chart" and "last_chart" in st.session_state:
                                 current_chart = st.session_state.last_chart
@@ -299,14 +300,14 @@ def show_chatbot() -> None:
                                 if current_chart:
                                     st.plotly_chart(current_chart, use_container_width=True)
                             
-                            # Simpan ke Session UI (Agar persist saat rerun)
+                            # Simpan ke Session UI
                             st.session_state.messages.append({
                                 "role": ROLE_ASSISTANT, 
                                 "content": answer_text,
-                                "chart": current_chart # PENTING: Simpan objek grafik di sini
+                                "chart": current_chart # Jika ada grafik, simpan di sini
                             })
                             
-                            # Simpan Text ke DB (Grafik tidak bisa disimpan ke DB SQLite standar)
+                            # Simpan Text ke DB
                             save_chat_log(ROLE_MODEL, answer_text)
 
                         except Exception as e:
@@ -315,9 +316,9 @@ def show_chatbot() -> None:
                             save_chat_log(ROLE_MODEL, error_msg)
                             st.session_state.messages.append({"role": ROLE_ASSISTANT, "content": error_msg, "chart": None})
                 else:
-                    st.warning(f"⚠️ Fungsi '{tool_name}' belum diimplementasikan.")
+                    st.warning(f"Warning: Fungsi '{tool_name}' belum diimplementasikan.")
 
-            # --- Skenario B: Teks Biasa ---
+            # Teks Biasa
             else:
                 text_resp = getattr(first_part, "text", None)
                 if text_resp:
@@ -327,7 +328,7 @@ def show_chatbot() -> None:
                     st.session_state.messages.append({"role": ROLE_ASSISTANT, "content": text_resp, "chart": None})
                     save_chat_log(ROLE_MODEL, text_resp)
                 else:
-                    st.warning("🤔 Model tidak memberikan respons teks.")
+                    st.warning("Warning: Model tidak memberikan respons teks.")
 
         except Exception as e:
             st.error(f"System Error: {str(e)}")
