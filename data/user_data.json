@@ -33,6 +33,18 @@
       "buy_price": 3775.0,
       "quantity": 10,
       "currency": "IDR"
+    },
+    {
+      "symbol": "BBCA.JK",
+      "buy_price": 8170.0,
+      "quantity": 100,
+      "currency": "IDR"
+    },
+    {
+      "symbol": "NVDA",
+      "buy_price": 170.0,
+      "quantity": 100,
+      "currency": "USD"
     }
   ]
 }
