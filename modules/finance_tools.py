@@ -1,16 +1,30 @@
+import os
+import json
+from typing import Optional, Union
+
 import yfinance as yf
 import plotly.graph_objects as go
 import streamlit as st
 import pandas as pd
+import numpy as np
 from GoogleNews import GoogleNews
 from newsapi import NewsApiClient
-import os
-import json
-import numpy as np
+
+# Dependency Injection for LLM Analysis
+from modules.gemini_utils import load_gemini_model
 
 # 1. HELPER FUNCTIONS
-def get_stock_data_safe(ticker: str, period: str = "1y"):
-    """Mengambil data historis dengan error handling."""
+def get_stock_data_safe(ticker: str, period: str = "1y") -> Optional[pd.DataFrame]:
+    """
+    Retrieves historical stock data with error handling.
+
+    Args:
+        ticker (str): The stock ticker symbol.
+        period (str): The data period to download (default: "1y").
+
+    Returns:
+        Optional[pd.DataFrame]: DataFrame containing stock data, or None if empty/failed.
+    """
     try:
         stock = yf.Ticker(ticker)
         df = stock.history(period=period)
@@ -21,47 +35,79 @@ def get_stock_data_safe(ticker: str, period: str = "1y"):
         return None
 
 def clean_ticker_for_news(ticker: str) -> str:
-    """Menghapus suffix .JK atau .T untuk pencarian berita."""
+    """
+    Sanitizes the ticker symbol by removing exchange suffixes for news searches.
+
+    Args:
+        ticker (str): The raw ticker symbol (e.g., 'BBCA.JK').
+
+    Returns:
+        str: The cleaned ticker symbol (e.g., 'BBCA').
+    """
     return ticker.replace(".JK", "").replace(".jk", "").replace(".T", "")
 
 # 2. BASIC TECHNICAL & FUNDAMENTAL TOOLS
-def get_stock_price(ticker: str):
+def get_stock_price(ticker: str) -> str:
+    """Fetches the most recent closing price."""
     df = get_stock_data_safe(ticker, period='1d')
-    if df is None: return "Harga tidak ditemukan."
+    if df is None: 
+        return "Price data not found."
     return str(df.iloc[-1].Close)
 
-def calculate_SMA(ticker: str, window: int = 20):
+def calculate_SMA(ticker: str, window: int = 20) -> str:
+    """Calculates the Simple Moving Average (SMA)."""
     df = get_stock_data_safe(ticker, period='2y')
-    if df is None: return "Data tidak cukup."
+    if df is None: 
+        return "Insufficient data."
     return str(df['Close'].rolling(window=window).mean().iloc[-1])
 
-def calculate_EMA(ticker: str, window: int = 20):
+def calculate_EMA(ticker: str, window: int = 20) -> str:
+    """Calculates the Exponential Moving Average (EMA)."""
     df = get_stock_data_safe(ticker, period='2y')
-    if df is None: return "Data tidak cukup."
+    if df is None: 
+        return "Insufficient data."
     return str(df['Close'].ewm(span=window, adjust=False).mean().iloc[-1])
 
-def calculate_RSI(ticker: str, window: int = 14):
+def calculate_RSI(ticker: str, window: int = 14) -> str:
+    """Calculates the Relative Strength Index (RSI)."""
     df = get_stock_data_safe(ticker, period='6mo')
-    if df is None: return "Data tidak cukup."
+    if df is None: 
+        return "Insufficient data."
+    
     delta = df['Close'].diff()
     gain = (delta.where(delta > 0, 0)).rolling(window=window).mean()
     loss = (-delta.where(delta < 0, 0)).rolling(window=window).mean()
+    
     rs = gain / loss
     rsi = 100 - (100 / (1 + rs))
     return str(rsi.iloc[-1])
 
-def calculate_MACD(ticker: str):
+def calculate_MACD(ticker: str) -> str:
+    """Calculates MACD, Signal, and Histogram values."""
     df = get_stock_data_safe(ticker, period='1y')
-    if df is None: return "Data tidak cukup."
+    if df is None: 
+        return "Insufficient data."
+    
     short_EMA = df['Close'].ewm(span=12, adjust=False).mean()
     long_EMA = df['Close'].ewm(span=26, adjust=False).mean()
     macd_line = short_EMA - long_EMA
     signal_line = macd_line.ewm(span=9, adjust=False).mean()
     hist = macd_line - signal_line
-    return f"MACD: {macd_line.iloc[-1]:.2f}, Signal: {signal_line.iloc[-1]:.2f}, Hist: {hist.iloc[-1]:.2f}"
+    
+    return (f"MACD: {macd_line.iloc[-1]:.2f}, "
+            f"Signal: {signal_line.iloc[-1]:.2f}, "
+            f"Hist: {hist.iloc[-1]:.2f}")
 
-def get_fundamental_data(ticker: str):
-    """Mengambil data fundamental dasar (P/E, Market Cap, EPS)."""
+def get_fundamental_data(ticker: str) -> str:
+    """
+    Retrieves key fundamental metrics (Market Cap, P/E, EPS, PBV).
+
+    Args:
+        ticker (str): The stock ticker symbol.
+
+    Returns:
+        str: Formatted string of fundamental data or error message.
+    """
     try:
         info = yf.Ticker(ticker).info
         return (f"Data Fundamental {ticker.upper()}:\n"
@@ -69,24 +115,23 @@ def get_fundamental_data(ticker: str):
                 f"- P/E Ratio: {info.get('trailingPE', 'N/A')}\n"
                 f"- EPS: {info.get('trailingEps', 'N/A')}\n"
                 f"- PBV Ratio: {info.get('priceToBook', 'N/A')}")
-    except:
-        return "Gagal mengambil data fundamental."
+    except Exception:
+        return "Failed to retrieve fundamental data."
 
 # 3. VISUALIZATION
 def plot_interactive_chart(ticker: str) -> str:
     """
-    Generates and caches an interactive technical analysis chart.
+    Generates and caches an interactive technical analysis chart (Plotly).
 
-    Visualizes 6 months of OHLC data combined with Swing Trading indicators:
-    SMA 20, SMA 50, and Fibonacci Retracement levels (0.382, 0.5, 0.618) 
-    derived from the 90-day high/low range. The resulting Plotly figure 
-    is stored in the Streamlit session state for UI persistence.
+    Visualizes 6 months of OHLC data combined with SMA 20, SMA 50, and 
+    Fibonacci Retracement levels derived from the 90-day high/low range. 
+    The figure is cached in `st.session_state` for UI persistence.
 
     Args:
-        ticker (str): The stock ticker symbol (e.g., 'BBCA.JK', 'NVDA').
+        ticker (str): The stock ticker symbol.
 
     Returns:
-        str: A status message indicating successful generation or an error description.
+        str: Status message indicating success or failure.
     """
     try:
         # 1. Data Fetching
@@ -134,7 +179,6 @@ def plot_interactive_chart(ticker: str) -> str:
         ))
 
         # Fibonacci Annotations
-        # Rendering lines only for the visible chart period
         start_date_fib = df.index[len(df)//2] 
         end_date_fib = df.index[-1]
         colors_fib = {"Fib 0.382": "orange", "Fib 0.500": "yellow", "Fib 0.618": "cyan"}
@@ -168,13 +212,21 @@ def plot_interactive_chart(ticker: str) -> str:
     except Exception as e:
         return f"Chart generation error: {str(e)}"
 
-# 4. HYBRID NEWS ENGINE
+# 4. NEWS & SENTIMENT ANALYSIS TOOLS
 def get_hybrid_news(ticker: str) -> str:
-    """Menggabungkan berita dari Google News (Lokal) dan NewsAPI (Global)."""
+    """
+    Aggregates news from Google News (Local) and NewsAPI (Global).
+
+    Args:
+        ticker (str): The stock ticker symbol.
+
+    Returns:
+        str: A formatted string containing news headlines and links.
+    """
     news_results = []
     clean_symbol = clean_ticker_for_news(ticker)
     
-    # --- SUMBER 1: Google News (Prioritas Saham Indo) ---
+    # Source 1: Google News (Priority: Local/ID)
     try:
         googlenews = GoogleNews(lang='id', region='ID')
         googlenews.search(f"Saham {clean_symbol}")
@@ -189,7 +241,7 @@ def get_hybrid_news(ticker: str) -> str:
     except Exception as e:
         print(f"Google News Error: {e}")
 
-    # --- SUMBER 2: NewsAPI (Prioritas Saham US / Cadangan) ---
+    # Source 2: NewsAPI (Priority: Global/US)
     api_key = os.getenv("NEWS_API_KEY")
     if api_key:
         try:
@@ -206,11 +258,73 @@ def get_hybrid_news(ticker: str) -> str:
             print(f"NewsAPI Error: {e}")
     
     if not news_results:
-        return "Tidak ditemukan berita signifikan dalam 7 hari terakhir."
+        return "No significant news found in the last 7 days."
     
     return "\n\n".join(news_results)
 
-# 5. ADVANCED ANALYSIS TOOLS (LLM Helpers)
+def analyze_news_relevance(ticker: str, topic: Optional[str] = None) -> str:
+    """
+    Fetches news and uses the configured LLM to perform sentiment analysis.
+
+    Args:
+        ticker (str): The stock ticker symbol.
+        topic (Optional[str]): Specific topic to filter news (default: None).
+
+    Returns:
+        str: AI-generated summary of the news sentiment.
+    """
+    news_api_key = os.getenv("NEWS_API_KEY")
+    if not news_api_key:
+        return "Error: Missing NEWS_API_KEY in environment variables."
+
+    try:
+        newsapi = NewsApiClient(api_key=news_api_key)
+        
+        # Resolve full company name for better search relevance
+        try:
+            company_name = yf.Ticker(ticker).info.get('longName', ticker)
+        except Exception:
+            company_name = ticker
+
+        query = f'"{company_name}" AND "{topic}"' if topic else f'"{company_name}"'
+        
+        news = newsapi.get_everything(
+            q=query, 
+            language='en', 
+            sort_by='relevancy', 
+            page_size=5
+        )
+        
+        articles = news.get('articles')
+        if not articles:
+            return f"No relevant news found for {company_name}."
+
+        news_context = []
+        for i, item in enumerate(articles, 1):
+            title = item.get('title', 'No Title')
+            desc = item.get('description', 'No Description')
+            link = item.get('url', '#')
+            news_context.append(f"📰 **{i}. {title}**\n\n{desc}\n\n🔗 [Read More]({link})\n")
+
+        formatted_news = "\n---\n".join(news_context)
+        
+        # Load LLM for stateless analysis
+        model = load_gemini_model()
+        analysis_prompt = (
+            f"Analyze the following news for {ticker.upper()} ({company_name}). "
+            f"Summarize key findings and determine the general sentiment (Positive/Negative/Neutral).\n\n"
+            f"{formatted_news}"
+        )
+        
+        response = model.generate_content(analysis_prompt)
+        return response.text
+
+    except Exception as e:
+        if 'apiKeyInvalid' in str(e):
+            return "❌ Error: Invalid NewsAPI Key."
+        return f"Error fetching news analysis: {str(e)}"
+
+# 5. ADVANCED ANALYSIS TOOLS
 def analyze_stock_recommendation(ticker: str) -> str:
     """
     Generates a comprehensive technical analysis report for swing trading strategies.
@@ -277,6 +391,9 @@ def analyze_stock_recommendation(ticker: str) -> str:
 
     # 3. Sentiment
     news_summary = get_hybrid_news(ticker)
+    
+    # Force Chart Generation
+    plot_interactive_chart(ticker)
 
     # 4. Report Construction
     report = f"""
@@ -320,32 +437,35 @@ def analyze_stock_recommendation(ticker: str) -> str:
     """
     return report
 
-def get_my_portfolio():
-    """Membaca data portofolio mentah (Legacy function, fallback)."""
+# 6. PORTFOLIO TOOLS
+def get_my_portfolio() -> str:
+    """Reads raw portfolio data from local JSON storage."""
     try:
         FILE_PATH = os.path.join("data", "user_data.json")
-        if not os.path.exists(FILE_PATH): return "Data kosong."
+        if not os.path.exists(FILE_PATH): 
+            return "Data is empty."
         with open(FILE_PATH, "r") as f:
             data = json.load(f)
         return str(data.get("portfolio", []))
-    except: return "Error membaca data."
+    except Exception: 
+        return "Error reading data."
 
-def analyze_portfolio_holdings():
+def analyze_portfolio_holdings() -> str:
     """
-    TOOL KHUSUS: Mengambil data portofolio dari JSON, lalu secara OTOMATIS
-    mengambil harga terkini (Real-time) dan menghitung Gain/Loss.
+    Analyzes portfolio performance by fetching real-time prices for held assets.
+    Calculates P/L and returns a formatted summary.
     """
     try:
         FILE_PATH = os.path.join("data", "user_data.json")
         if not os.path.exists(FILE_PATH) or os.path.getsize(FILE_PATH) == 0:
-            return "INFO: Data portofolio kosong. Silakan isi watchlist/portofolio dulu."
+            return "INFO: Portfolio data is empty. Please populate your watchlist/portfolio."
             
         with open(FILE_PATH, "r") as f:
             data = json.load(f)
         
         portfolio = data.get("portfolio", [])
         if not portfolio:
-            return "Portofolio Anda saat ini kosong."
+            return "Your portfolio is currently empty."
 
         total_invested_idr, total_val_idr = 0, 0
         total_invested_usd, total_val_usd = 0, 0
@@ -357,12 +477,12 @@ def analyze_portfolio_holdings():
             avg_buy = float(item['buy_price'])
             currency = item.get('currency', 'USD') # Default USD
             
-            # Ambil harga real-time
+            # Fetch real-time price
             df = get_stock_data_safe(symbol, period="1d")
             
             if df is None or df.empty:
                 current_price = avg_buy # Fallback
-                remark = "(Gagal ambil harga)"
+                remark = "(Failed to fetch price)"
             else:
                 current_price = df['Close'].iloc[-1]
                 remark = ""
@@ -372,7 +492,7 @@ def analyze_portfolio_holdings():
             pnl = current_val - initial_val
             pnl_percent = (pnl / initial_val) * 100 if initial_val != 0 else 0
 
-            # Pisahkan Keranjang
+            # Currency Separation
             if currency == 'IDR':
                 total_invested_idr += initial_val
                 total_val_idr += current_val
@@ -384,39 +504,39 @@ def analyze_portfolio_holdings():
 
             sign = "+" if pnl >= 0 else ""
             details.append(
-                f"- **{symbol}** ({currency}): Beli {fmt.format(avg_buy)} -> Kini {fmt.format(current_price)}. "
+                f"- **{symbol}** ({currency}): Buy {fmt.format(avg_buy)} -> Now {fmt.format(current_price)}. "
                 f"P/L: {sign}{fmt.format(pnl)} ({sign}{pnl_percent:.2f}%) {remark}"
             )
 
-        # Rangkuman Total
+        # Summary Construction
         summary_idr = ""
         if total_invested_idr > 0:
             pnl_idr = total_val_idr - total_invested_idr
             pnl_pct_idr = (pnl_idr/total_invested_idr)*100
-            summary_idr = f"TOTAL IDR: Invest Rp {total_invested_idr:,.0f} -> Aset Rp {total_val_idr:,.0f} (P/L: {pnl_pct_idr:+.2f}%)"
+            summary_idr = f"TOTAL IDR: Invest Rp {total_invested_idr:,.0f} -> Asset Rp {total_val_idr:,.0f} (P/L: {pnl_pct_idr:+.2f}%)"
 
         summary_usd = ""
         if total_invested_usd > 0:
             pnl_usd = total_val_usd - total_invested_usd
             pnl_pct_usd = (pnl_usd/total_invested_usd)*100
-            summary_usd = f"TOTAL USD: Invest ${total_invested_usd:,.2f} -> Aset ${total_val_usd:,.2f} (P/L: {pnl_pct_usd:+.2f}%)"
+            summary_usd = f"TOTAL USD: Invest ${total_invested_usd:,.2f} -> Asset ${total_val_usd:,.2f} (P/L: {pnl_pct_usd:+.2f}%)"
 
         report = f"""
-=== LAPORAN KINERJA PORTOFOLIO (REAL-TIME) ===
+PORTFOLIO PERFORMANCE REPORT (REAL-TIME)
 
-[RINCIAN PER SAHAM]
+[ASSET DETAILS]
 {chr(10).join(details)}
 
-[TOTAL KESELURUHAN]
+[OVERALL SUMMARY]
 {summary_idr}
 {summary_usd}
 
-[INSTRUKSI UNTUK AI]
-1. Jelaskan performa portofolio secara keseluruhan (Untung/Rugi).
-2. Highlight saham "Winner" dan "Loser".
-3. Berikan saran singkat (Hold/Sell/Buy More).
+[AI INSTRUCTIONS]
+1. Explain the overall portfolio performance (Profit/Loss).
+2. Highlight "Winner" and "Loser" stocks.
+3. Provide brief advice (Hold/Sell/Buy More).
 """
         return report
 
     except Exception as e:
-        return f"Error saat analisis portofolio: {str(e)}"
+        return f"Error analyzing portfolio: {str(e)}"

@@ -1,0 +1,23 @@
+{
+  "watchlist": [],
+  "portfolio": [
+    {
+      "symbol": "BBRI.JK",
+      "buy_price": 3700.0,
+      "quantity": 1000,
+      "currency": "IDR"
+    },
+    {
+      "symbol": "BBCA.JK",
+      "buy_price": 8000.0,
+      "quantity": 1500,
+      "currency": "IDR"
+    },
+    {
+      "symbol": "AAPL",
+      "buy_price": 273.0,
+      "quantity": 500,
+      "currency": "USD"
+    }
+  ]
+}

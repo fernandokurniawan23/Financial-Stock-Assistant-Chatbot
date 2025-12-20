@@ -1,0 +1,41 @@
+{
+  "watchlist": [],
+  "portfolio": [
+    {
+      "symbol": "BBRI.JK",
+      "buy_price": 3700.0,
+      "quantity": 1000,
+      "currency": "IDR"
+    },
+    {
+      "symbol": "BBCA.JK",
+      "buy_price": 8000.0,
+      "quantity": 1500,
+      "currency": "IDR"
+    },
+    {
+      "symbol": "AAPL",
+      "buy_price": 273.0,
+      "quantity": 500,
+      "currency": "USD"
+    },
+    {
+      "symbol": "NVDA",
+      "buy_price": 180.0,
+      "quantity": 700,
+      "currency": "USD"
+    },
+    {
+      "symbol": "AMZN",
+      "buy_price": 227.5,
+      "quantity": 200,
+      "currency": "USD"
+    },
+    {
+      "symbol": "META",
+      "buy_price": 658.5,
+      "quantity": 100,
+      "currency": "USD"
+    }
+  ]
+}
