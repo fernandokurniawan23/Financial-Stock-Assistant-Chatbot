@@ -59,20 +59,3 @@ An interactive chatbot powered by Google Gemini 1.5 Flash, engineered for financ
     ```bash
     streamlit run main.py
     ```
-
-## Project Structure
-
-```text
-FinAssist/
-├── modules/
-│   ├── dashboard_model.py    # Data fetching & logic for Dashboard
-│   ├── dashboard_view.py     # UI rendering for Dashboard
-│   ├── chatbot_model.py      # LLM handling & tool injection
-│   ├── finance_tools.py      # Technical analysis & plotting functions
-│   ├── watchlist_model.py    # Portfolio data management
-│   └── ui_assets.py          # Centralized CSS & SVG assets
-├── images/                   # Screenshots for documentation
-├── main.py                   # Application entry point
-├── dashboard.py              # Dashboard controller
-├── chatbot.py                # Chatbot controller
-└── watchlist.py              # Portfolio controller
