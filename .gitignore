@@ -1,4 +1,4 @@
-# Environment variables (WAJIB)
+# Environment variables
 .env
 .env.*
 
@@ -12,6 +12,7 @@ __pycache__/
 
 # Generated images
 *.png
+!images/*.png
 
 # OS files
 .DS_Store

@@ -2,8 +2,8 @@
 
 FinAssist is a streamlined financial analytics platform designed to provide real-time market insights and portfolio management. It integrates a live dashboard with an LLM-driven chatbot capable of performing technical and fundamental analysis on demand.
 
-![Dashboard Overview](images/image_e021a2.png)
-
+![Dashboard Overview](images/dashboard1.png)
+![Dashboard Overview 2](images/dashboard2.png)
 ## Key Features
 
 ### 1. Market Dashboard
