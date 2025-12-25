@@ -32,7 +32,7 @@ An interactive chatbot powered by Google Gemini 1.5 Flash, engineered for financ
 ## Tech Stack
 
 - **Frontend**: Streamlit (Python)
-- **AI/LLM**: Google Gemini 1.5 Flash (via Google Generative AI SDK)
+- **AI/LLM**: Google Gemini 2.5 Flash (via Google Generative AI SDK)
 - **Data Sources**:
   - `yfinance`: Historical and real-time stock data.
   - `GoogleNews` / `NewsAPI`: Market news aggregation.
