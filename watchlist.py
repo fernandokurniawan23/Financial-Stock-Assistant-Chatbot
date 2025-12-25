@@ -21,7 +21,7 @@ def show_watchlist() -> None:
     # 1. Authentication Check
     current_user = st.session_state.get("username")
     if not current_user:
-        st.warning("🔒 Access Denied. Please login via Dashboard.")
+        st.warning("Access Denied. Please login via Dashboard.")
         return
 
     # 2. State Initialization (Load Data)
@@ -33,28 +33,31 @@ def show_watchlist() -> None:
     view.render_header(current_user)
     
     # 4. Render Tabs
-    # We use HTML/SVG icons in tab names for visual consistency
-    tab1, tab2 = st.tabs(["👀 Watchlist", "💰 Portfolio"])
+    tab1, tab2 = st.tabs(["Watchlist", "Portfolio"])
     
-    # ==========================
     # TAB 1: WATCHLIST LOGIC
-    # ==========================
     with tab1:
         # A. Add Stock Logic
         new_ticker = view.render_add_watchlist_form()
         if new_ticker:
+            # Add to memory
             if new_ticker not in st.session_state.user_data["watchlist"]:
                 st.session_state.user_data["watchlist"].append(new_ticker)
+                # Persist to disk
                 model.save_user_data(current_user, st.session_state.user_data)
                 st.rerun()
             else:
-                st.toast("Stock already in watchlist", icon="⚠️")
+                st.toast("Stock is already in your watchlist.", icon="ℹ️")
 
         # B. Display Stocks
         watchlist = st.session_state.user_data["watchlist"]
         if watchlist:
             # Batch fetch for performance
-            batch_data = get_batch_stock_data(watchlist, period="1mo")
+            try:
+                batch_data = get_batch_stock_data(watchlist, period="1mo")
+            except Exception:
+                st.error("Failed to fetch market data. Please check your connection.")
+                batch_data = pd.DataFrame()
             
             # Grid Layout
             cols = st.columns(3)
@@ -80,11 +83,9 @@ def show_watchlist() -> None:
                     # Render
                     view.render_stock_card(ticker, data, i, delete_handler)
         else:
-            st.info("Watchlist is empty. Add a stock to start tracking!")
+            st.info("Watchlist is empty. Add a stock ticker above to start tracking.")
 
-    # ==========================
     # TAB 2: PORTFOLIO LOGIC
-    # ==========================
     with tab2:
         # A. Add Transaction Logic
         form_data = view.render_portfolio_form()
@@ -97,10 +98,10 @@ def show_watchlist() -> None:
                     "currency": form_data["currency"]
                 })
                 model.save_user_data(current_user, st.session_state.user_data)
-                st.success("Transaction saved successfully!")
+                st.success("Transaction recorded.")
                 st.rerun()
             else:
-                st.error("Please fill in all fields correctly.")
+                st.error("Please ensure Ticker, Price, and Quantity are valid.")
 
         # B. Calculate & Render
         portfolio = st.session_state.user_data["portfolio"]
@@ -120,4 +121,4 @@ def show_watchlist() -> None:
             # Render Table
             view.render_portfolio_table(calc_result["items"], delete_pf_handler)
         else:
-            st.info("Portfolio is empty. Record your first investment above.")
+            st.info("Portfolio is empty. Record your investments to see performance metrics.")

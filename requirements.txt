@@ -1,29 +1,10 @@
-# Core
-streamlit==1.39.0
-python-dotenv==1.0.1
-
-# Data Handling
-pandas==2.2.3
-numpy==1.26.4
-
-# Visualization
-plotly==5.24.1
-matplotlib==3.9.2
-
-# Finance Data
-yfinance==0.2.48
-yahoo_fin==0.8.9.1
-requests_html==0.10.0
-lxml==5.3.0
-
-# AI (Gemini)
-google-generativeai==0.8.3
-
-# Image and Utilities
-Pillow==10.3.0
-
-# Optional
-pyppeteer==2.0.0
-
-# Compatibility (prevent random HTML render error)
-html5lib==1.1
+streamlit
+pandas
+numpy
+yfinance
+plotly
+google-generativeai
+python-dotenv
+GoogleNews
+newsapi-python
+lxml

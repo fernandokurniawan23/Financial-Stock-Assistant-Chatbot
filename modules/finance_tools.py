@@ -10,20 +10,10 @@ import numpy as np
 from GoogleNews import GoogleNews
 from newsapi import NewsApiClient
 
-# Dependency Injection for LLM Analysis
-from modules.gemini_utils import load_gemini_model
-
 # 1. HELPER FUNCTIONS
 def get_stock_data_safe(ticker: str, period: str = "1y") -> Optional[pd.DataFrame]:
     """
     Retrieves historical stock data with error handling.
-
-    Args:
-        ticker (str): The stock ticker symbol.
-        period (str): The data period to download (default: "1y").
-
-    Returns:
-        Optional[pd.DataFrame]: DataFrame containing stock data, or None if empty/failed.
     """
     try:
         stock = yf.Ticker(ticker)
@@ -37,12 +27,6 @@ def get_stock_data_safe(ticker: str, period: str = "1y") -> Optional[pd.DataFram
 def clean_ticker_for_news(ticker: str) -> str:
     """
     Sanitizes the ticker symbol by removing exchange suffixes for news searches.
-
-    Args:
-        ticker (str): The raw ticker symbol (e.g., 'BBCA.JK').
-
-    Returns:
-        str: The cleaned ticker symbol (e.g., 'BBCA').
     """
     return ticker.replace(".JK", "").replace(".jk", "").replace(".T", "")
 
@@ -101,12 +85,6 @@ def calculate_MACD(ticker: str) -> str:
 def get_fundamental_data(ticker: str) -> str:
     """
     Retrieves key fundamental metrics (Market Cap, P/E, EPS, PBV).
-
-    Args:
-        ticker (str): The stock ticker symbol.
-
-    Returns:
-        str: Formatted string of fundamental data or error message.
     """
     try:
         info = yf.Ticker(ticker).info
@@ -122,16 +100,6 @@ def get_fundamental_data(ticker: str) -> str:
 def plot_interactive_chart(ticker: str) -> str:
     """
     Generates and caches an interactive technical analysis chart (Plotly).
-
-    Visualizes 6 months of OHLC data combined with SMA 20, SMA 50, and 
-    Fibonacci Retracement levels derived from the 90-day high/low range. 
-    The figure is cached in `st.session_state` for UI persistence.
-
-    Args:
-        ticker (str): The stock ticker symbol.
-
-    Returns:
-        str: Status message indicating success or failure.
     """
     try:
         # 1. Data Fetching
@@ -216,12 +184,6 @@ def plot_interactive_chart(ticker: str) -> str:
 def get_hybrid_news(ticker: str) -> str:
     """
     Aggregates news from Google News (Local) and NewsAPI (Global).
-
-    Args:
-        ticker (str): The stock ticker symbol.
-
-    Returns:
-        str: A formatted string containing news headlines and links.
     """
     news_results = []
     clean_symbol = clean_ticker_for_news(ticker)
@@ -265,14 +227,10 @@ def get_hybrid_news(ticker: str) -> str:
 def analyze_news_relevance(ticker: str, topic: Optional[str] = None) -> str:
     """
     Fetches news and uses the configured LLM to perform sentiment analysis.
-
-    Args:
-        ticker (str): The stock ticker symbol.
-        topic (Optional[str]): Specific topic to filter news (default: None).
-
-    Returns:
-        str: AI-generated summary of the news sentiment.
     """
+    # LAZY IMPORT
+    from modules.gemini_utils import load_gemini_model
+
     news_api_key = os.getenv("NEWS_API_KEY")
     if not news_api_key:
         return "Error: Missing NEWS_API_KEY in environment variables."
@@ -324,7 +282,7 @@ def analyze_news_relevance(ticker: str, topic: Optional[str] = None) -> str:
             return "❌ Error: Invalid NewsAPI Key."
         return f"Error fetching news analysis: {str(e)}"
 
-# 5. ADVANCED ANALYSIS TOOLS
+# 5. ADVANCED ANALYSIS TOOLS (LOGIKA ASLI ANDA)
 def analyze_stock_recommendation(ticker: str) -> str:
     """
     Generates a comprehensive technical analysis report for swing trading strategies.
@@ -449,94 +407,3 @@ def get_my_portfolio() -> str:
         return str(data.get("portfolio", []))
     except Exception: 
         return "Error reading data."
-
-def analyze_portfolio_holdings() -> str:
-    """
-    Analyzes portfolio performance by fetching real-time prices for held assets.
-    Calculates P/L and returns a formatted summary.
-    """
-    try:
-        FILE_PATH = os.path.join("data", "user_data.json")
-        if not os.path.exists(FILE_PATH) or os.path.getsize(FILE_PATH) == 0:
-            return "INFO: Portfolio data is empty. Please populate your watchlist/portfolio."
-            
-        with open(FILE_PATH, "r") as f:
-            data = json.load(f)
-        
-        portfolio = data.get("portfolio", [])
-        if not portfolio:
-            return "Your portfolio is currently empty."
-
-        total_invested_idr, total_val_idr = 0, 0
-        total_invested_usd, total_val_usd = 0, 0
-        details = []
-
-        for item in portfolio:
-            symbol = item['symbol']
-            qty = float(item['quantity'])
-            avg_buy = float(item['buy_price'])
-            currency = item.get('currency', 'USD') # Default USD
-            
-            # Fetch real-time price
-            df = get_stock_data_safe(symbol, period="1d")
-            
-            if df is None or df.empty:
-                current_price = avg_buy # Fallback
-                remark = "(Failed to fetch price)"
-            else:
-                current_price = df['Close'].iloc[-1]
-                remark = ""
-
-            initial_val = avg_buy * qty
-            current_val = current_price * qty
-            pnl = current_val - initial_val
-            pnl_percent = (pnl / initial_val) * 100 if initial_val != 0 else 0
-
-            # Currency Separation
-            if currency == 'IDR':
-                total_invested_idr += initial_val
-                total_val_idr += current_val
-                fmt = "Rp {:,.0f}"
-            else:
-                total_invested_usd += initial_val
-                total_val_usd += current_val
-                fmt = "$ {:,.2f}"
-
-            sign = "+" if pnl >= 0 else ""
-            details.append(
-                f"- **{symbol}** ({currency}): Buy {fmt.format(avg_buy)} -> Now {fmt.format(current_price)}. "
-                f"P/L: {sign}{fmt.format(pnl)} ({sign}{pnl_percent:.2f}%) {remark}"
-            )
-
-        # Summary Construction
-        summary_idr = ""
-        if total_invested_idr > 0:
-            pnl_idr = total_val_idr - total_invested_idr
-            pnl_pct_idr = (pnl_idr/total_invested_idr)*100
-            summary_idr = f"TOTAL IDR: Invest Rp {total_invested_idr:,.0f} -> Asset Rp {total_val_idr:,.0f} (P/L: {pnl_pct_idr:+.2f}%)"
-
-        summary_usd = ""
-        if total_invested_usd > 0:
-            pnl_usd = total_val_usd - total_invested_usd
-            pnl_pct_usd = (pnl_usd/total_invested_usd)*100
-            summary_usd = f"TOTAL USD: Invest ${total_invested_usd:,.2f} -> Asset ${total_val_usd:,.2f} (P/L: {pnl_pct_usd:+.2f}%)"
-
-        report = f"""
-PORTFOLIO PERFORMANCE REPORT (REAL-TIME)
-
-[ASSET DETAILS]
-{chr(10).join(details)}
-
-[OVERALL SUMMARY]
-{summary_idr}
-{summary_usd}
-
-[AI INSTRUCTIONS]
-1. Explain the overall portfolio performance (Profit/Loss).
-2. Highlight "Winner" and "Loser" stocks.
-3. Provide brief advice (Hold/Sell/Buy More).
-"""
-        return report
-
-    except Exception as e:
-        return f"Error analyzing portfolio: {str(e)}"

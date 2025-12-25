@@ -1,12 +1,12 @@
 import streamlit as st
+import time
 from modules.ui_assets import ICONS
 
 """
 CHATBOT VIEW MODULE
 -------------------
 Responsibility: UI Rendering and User Interaction.
-This module strictly handles visual components, removing emojis 
-in favor of professional SVG icons.
+Handles visual components and user input capture.
 """
 
 def render_header():
@@ -52,6 +52,25 @@ def render_account_status(status_msg: str):
         </div>
     """, unsafe_allow_html=True)
 
+def render_sidebar_controls():
+    """
+    Renders sidebar interface for chat session management.
+    Handles history reset functionality.
+    """
+    with st.sidebar:
+        st.markdown("### Session Management")
+        
+        if st.button("Reset Chat", use_container_width=True):
+            # Clear session state
+            if "chat_history" in st.session_state:
+                st.session_state.chat_history = []
+            if "messages" in st.session_state:
+                st.session_state.messages = []
+            
+            st.toast("Conversation history purged.", icon="🧹")
+            time.sleep(0.5)
+            st.rerun()
+
 def render_chat_messages(messages: list):
     """
     Iterates through the message history and renders them.
@@ -59,10 +78,6 @@ def render_chat_messages(messages: list):
     """
     for msg in messages:
         role = msg["role"]
-        
-        # Use Streamlit's native chat_message but we could customize icons if Streamlit supported HTML icons there.
-        # Currently Streamlit supports emojis or image URLs for avatars.
-        # We will stick to default avatars for simplicity or pass 'user'/'assistant' strings.
         
         with st.chat_message(role):
             st.markdown(msg["content"])
